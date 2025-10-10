@@ -307,8 +307,8 @@ function addChatItem(uid, message) {
   const chatBox = document.querySelector('.chat-wrapper');
   const chatItem = document.createElement('div');
   chatItem.className = 'chat-item';
+  const copyText = message;
   let msg = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const copyText = msg;
   // 判断是否url，兼容端口号和带参数的网址
   if (/(http|https):\/\/[^\s<>"']+/g.test(msg)) {
     msg = msg.replace(/(http|https):\/\/[^\s<>"']+/g, (url) => {
