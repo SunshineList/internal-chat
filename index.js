@@ -98,18 +98,28 @@ wsServer.on('connection', (socket, request) => {
     roomId = null;
   }
   let turns = null;
+  console.log(`连接请求 - IP: ${ip}, roomId: ${roomId}, pwd: ${pwd}`);
+  
   if (roomId) {
+    console.log(`房间验证 - roomId: ${roomId}, 配置存在: ${!!roomPwd[roomId]}`);
+    if (roomPwd[roomId]) {
+      console.log(`密码验证 - 提供: ${pwd}, 期望: ${roomPwd[roomId].pwd}, 匹配: ${pwd && roomPwd[roomId].pwd.toLowerCase() === pwd.toLowerCase()}`);
+    }
+    
     if (!pwd || !roomPwd[roomId] || roomPwd[roomId].pwd.toLowerCase() !== pwd.toLowerCase()) {
+      console.log(`房间验证失败，切换到默认组`);
       roomId = null;
     } else {
+      console.log(`房间验证成功: ${roomId}`);
       turns = roomPwd[roomId].turns;
     }
   }
+  
   const currentId = service.registerUser(ip, roomId, socket);
   // 向客户端发送自己的id
   socketSend_UserId(socket, currentId, roomId, turns);
   
-  console.log(`${currentId}@${ip}${roomId ? '/' + roomId : ''} connected`);
+  console.log(`${currentId}@${ip}${roomId ? '/' + roomId : ''} connected, 最终roomId: ${roomId}`);
   
   service.getUserList(ip, roomId).forEach(user => {
     socketSend_RoomInfo(user.socket, ip, roomId);

@@ -52,10 +52,13 @@ function internalNet(ip) {
 
 function getKey(ip, roomId) {
   if (roomId) {
+    console.log(`getKey - 使用房间ID: ${roomId}`);
     return roomId;
   }
   const isInternalNet = internalNet(ip);
-  return isInternalNet ? 'internal' : ip;
+  const key = isInternalNet ? 'internal' : ip;
+  console.log(`getKey - IP: ${ip}, 内网: ${isInternalNet}, key: ${key}`);
+  return key;
 }
 
 function registerUser(ip, roomId, socket) {
