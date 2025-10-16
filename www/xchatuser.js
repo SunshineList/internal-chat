@@ -17,7 +17,7 @@ window.fgdx_configuration = {
   iceServers: [
     {
       urls: [
-        'stun:74.125.250.129:19302'
+        'stun:141.148.180.95:23457'
       ]
     }
   ],
