@@ -15,6 +15,12 @@ var MD5 = function(d){var r = M(V(Y(X(d),8*d.length)));return r.toLowerCase()};f
 
 // 初始化页面
 function initPage() {
+  // 初始化主题
+  initTheme();
+  
+  // 初始化设置
+  initSettings();
+  
   // 检测WebRTC支持
   if (!window.RTCPeerConnection && !window.webkitRTCPeerConnection) {
     addChatItem('system', '您的浏览器不支持WebRTC，请使用Chrome、Firefox、Safari等现代浏览器访问。');
@@ -161,6 +167,18 @@ function connectWebSocket() {
   };
 }
 
+// 表情符号数据
+const emojiData = {
+  smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
+  people: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏'],
+  nature: ['🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌾', '🌿', '🍀', '🍃', '🌱', '🌲', '🌳', '🌴', '🌵', '🌶️', '🍄', '🌰', '🌼', '🌻', '🌺', '🌸', '🌷', '🌹', '🥀', '🌾', '🌿', '🍀', '🍃', '🌱'],
+  food: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔'],
+  activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️'],
+  travel: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛺', '🚁', '🛸', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚀', '🛰️', '🚢'],
+  objects: ['💡', '🔦', '🏮', '🪔', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭'],
+  symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐']
+};
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
 
@@ -201,34 +219,57 @@ async function copy(e, msg) {
 function addLinkItem(uid, file) {
   const chatBox = document.querySelector('.chat-wrapper');
   const chatItem = document.createElement('div');
-  chatItem.className = 'chat-item';
+  
+  // 检查是否是图片文件
+  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+  const isMyMessage = uid === me.id;
+  
+  let messageTypeClass = isMyMessage ? 'my-message' : 'other-message';
+  messageTypeClass += isImage ? ' image-message' : ' file-message';
+  
+  chatItem.className = `chat-item ${messageTypeClass}`;
   
   const user = users.find(u => u.id === uid);
   const displayName = user?.nickname || uid;
   
-  // 检查是否是图片文件
-  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+  const messageTypeIcon = isImage ? '🖼️' : '📁';
   
   let contentHtml = '';
   if (isImage) {
     contentHtml = `
       <div class="image-preview">
-        <img src="${file.url}" alt="${file.name}" />
+        <img src="${file.url}" alt="${file.name}" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />
       </div>
-      <button class="copy-btn" onclick="this.parentElement.querySelector('a').click()">
-        <svg viewBox="0 0 24 24" width="20" height="20">
-          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/>
-        </svg>
-      </button>
-      <a href="${file.url}" download="${file.name}" style="display: none;"></a>
+      <div style="margin-top: 8px; font-size: 13px; color: #6b7280;">${file.name}</div>
     `;
   } else {
-    contentHtml = `<a class="file" href="${file.url}" download="${file.name}">[文件] ${file.name}</a>`;
+    contentHtml = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="background: #f3f4f6; padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+          </svg>
+          <span>${file.name}</span>
+        </div>
+      </div>
+    `;
   }
   
+  const timeString = new Date().toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+
   chatItem.innerHTML = `
-    <div class="chat-item_user">${uid === me.id ? '（我）': ''}${displayName} :</div>
-    <div class="chat-item_content">${contentHtml}</div>
+    <div class="chat-username">
+      <span class="message-type-icon ${isImage ? 'image' : 'file'}">${messageTypeIcon}</span>
+      ${displayName}
+    </div>
+    <div class="chat-bubble">
+      <div class="chat-content">${contentHtml}</div>
+      <div class="chat-time">${timeString}</div>
+      <a href="${file.url}" download="${file.name}" style="display: none;"></a>
+    </div>
   `;
   
   // 如果是图片，添加点击事件和加载完成后的滚动
@@ -280,9 +321,24 @@ function addLinkItem(uid, file) {
     img.onload = function() {
       chatBox.scrollTop = chatBox.scrollHeight;
     };
+  } else {
+    // 为文件添加点击下载事件
+    const fileDiv = chatItem.querySelector('.chat-content > div');
+    fileDiv.style.cursor = 'pointer';
+    fileDiv.onclick = function() {
+      chatItem.querySelector('a').click();
+    };
   }
   
   chatBox.appendChild(chatItem);
+  
+  // 移除欢迎消息（如果存在）
+  const welcomeMsg = chatBox.querySelector('.chat-welcome');
+  if (welcomeMsg) {
+    welcomeMsg.remove();
+  }
+  
+  // 不再保存聊天记录到本地存储（出于安全考虑）
   
   // 如果不是图片，立即滚动
   if (!isImage) {
@@ -306,7 +362,7 @@ function addChatItem(uid, message) {
 
   const chatBox = document.querySelector('.chat-wrapper');
   const chatItem = document.createElement('div');
-  chatItem.className = 'chat-item';
+  
   const copyText = message;
   let msg = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   // 判断是否url，兼容端口号和带参数的网址
@@ -319,25 +375,72 @@ function addChatItem(uid, message) {
   const user = users.find(u => u.id === uid);
   const displayName = uid === 'system' ? '系统' : (user?.nickname || uid);
   const isSystem = uid === 'system';
+  const isMyMessage = uid === me.id && !isSystem;
+
+  // 设置消息类型的CSS类
+  let messageTypeClass = 'other-message';
+  let messageTypeIcon = '💬';
+  
+  if (isSystem) {
+    messageTypeClass = 'system-message';
+    messageTypeIcon = '⚙️';
+  } else if (isMyMessage) {
+    messageTypeClass = 'my-message';
+    messageTypeIcon = '💬';
+  }
+
+  chatItem.className = `chat-item ${messageTypeClass}`;
 
   const copyButton = document.createElement('button')
   copyButton.className = 'copy-btn'
-  copyButton.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"></path></svg>'
+  copyButton.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"></path></svg>'
   copyButton.onclick = function () {
     copy(event,copyText)
   }
 
+  const timeString = new Date().toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+
   chatItem.innerHTML = `
-    <div class="chat-item_user ${isSystem ? 'system' : ''}">${!isSystem && uid === me.id ? '（我）': ''}${displayName} :</div>
-    <div class="chat-item_content">
-      <pre>${msg}</pre>
+    ${!isSystem ? `<div class="chat-username">
+      <span class="message-type-icon text">${messageTypeIcon}</span>
+      ${displayName}
+    </div>` : ''}
+    <div class="chat-bubble">
+      <div class="chat-content">${msg}</div>
+      <div class="chat-time">${timeString}</div>
     </div>
   `;
+  
   if (!isSystem) {
-    chatItem.querySelector('.chat-item_content').appendChild(copyButton);
+    chatItem.querySelector('.chat-bubble').appendChild(copyButton);
   }
+  
   chatBox.appendChild(chatItem);
-  chatBox.scrollTop = chatBox.scrollHeight;
+  
+  // 移除欢迎消息（如果存在）
+  const welcomeMsg = chatBox.querySelector('.chat-welcome');
+  if (welcomeMsg) {
+    welcomeMsg.remove();
+  }
+  
+  // 自动滚动（如果启用）
+  if (appSettings.autoScroll) {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+  
+  // 不再保存聊天记录到本地存储（出于安全考虑）
+  
+  // 如果不是自己发送的消息且不是系统消息，触发通知
+  if (uid !== me.id && uid !== 'system') {
+    playNotificationSound();
+    
+    const user = users.find(u => u.id === uid);
+    const displayName = user?.nickname || uid;
+    showDesktopNotification(`${displayName} 发来新消息`, message.substring(0, 50) + (message.length > 50 ? '...' : ''));
+  }
 }
 function sendMessage(msg) {
   const message = msg ?? messageInput.value;
@@ -507,6 +610,32 @@ async function joinedConnection(data) {
 }
 
 function refreshUsersHTML() {
+  const hasConnectedUsers = users.some(u => !u.isMe && u.isConnected());
+  
+  // 如果有连接的用户，隐藏欢迎页面，显示聊天界面
+  if (hasConnectedUsers) {
+    document.getElementById('welcomeSection').style.display = 'none';
+    document.getElementById('chatWrapper').style.display = 'flex';
+    
+    // 更新连接状态指示器
+    const statusIndicator = document.querySelector('.connection-status-indicator span');
+    const pulseDot = document.querySelector('.pulse-dot');
+    if (statusIndicator && pulseDot) {
+      statusIndicator.textContent = '已连接';
+      pulseDot.classList.add('connected');
+    }
+    
+    // 如果聊天区域是空的，添加欢迎消息
+    const chatWrapper = document.getElementById('chatWrapper');
+    if (chatWrapper.children.length === 0) {
+      showChatWelcomeMessage();
+    }
+  } else {
+    // 没有连接的用户，显示欢迎页面
+    document.getElementById('welcomeSection').style.display = 'flex';
+    document.getElementById('chatWrapper').style.display = 'none';
+  }
+  
   document.querySelector('#users').innerHTML = users.map(u => {
     const isConnected = u.isMe || u.isConnected();
     console.log(isConnected, '----');
@@ -528,15 +657,66 @@ function refreshUsersHTML() {
   }).join('');
 }
 
+// 显示聊天欢迎消息
+function showChatWelcomeMessage() {
+  const chatWrapper = document.getElementById('chatWrapper');
+  
+  // 创建欢迎消息容器
+  const welcomeDiv = document.createElement('div');
+  welcomeDiv.className = 'chat-welcome';
+  welcomeDiv.innerHTML = `
+    <div class="chat-welcome-content">
+      <div class="welcome-icon">🎉</div>
+      <h3>连接成功！</h3>
+      <p>您现在可以开始聊天和传输文件了</p>
+      <div class="welcome-tips">
+        <div class="tip-item">
+          <span class="tip-icon">💬</span>
+          <span>输入消息按 Enter 发送</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">📁</span>
+          <span>拖拽文件到窗口即可发送</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">😊</span>
+          <span>点击表情按钮添加表情</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">🔒</span>
+          <span>所有消息仅当前会话有效，保护您的隐私</span>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  chatWrapper.appendChild(welcomeDiv);
+  
+  // 不再加载历史消息（已移除历史记录功能）
+  
+  // 3秒后自动隐藏欢迎消息（如果没有其他消息）
+  setTimeout(() => {
+    if (chatWrapper.children.length === 1) {
+      // 如果只有欢迎消息，添加一个提示
+      addChatItem('system', '开始您的第一条消息吧！输入文字或拖拽文件到窗口。');
+      addChatItem('system', '🔒 提示：为了保护隐私，所有消息仅在当前会话有效，关闭页面后不会保留。');
+    }
+  }, 3000);
+}
+
 function enterTxt(event) {
-  if (event.ctrlKey || event.shiftKey) {
-    return;
-  }
   if (event.keyCode === 13) {
-    sendMessage();
-    event.preventDefault();
+    if (event.shiftKey || event.ctrlKey) {
+      // Shift+Enter 或 Ctrl+Enter 换行，允许默认行为
+      return;
+    } else {
+      // 单独 Enter 发送消息
+      sendMessage();
+      event.preventDefault();
+    }
   }
 }
+
 
 function showUserSelectModal() {
   const modal = document.getElementById('userSelectModal');
@@ -738,8 +918,248 @@ function saveNickname() {
   closeNicknameModal();
 }
 
+// 表情符号选择器功能
+function showEmojiModal() {
+  const modal = document.getElementById('emojiModal');
+  modal.style.display = 'block';
+  loadEmojiCategory('smileys');
+}
+
+function closeEmojiModal() {
+  const modal = document.getElementById('emojiModal');
+  modal.style.display = 'none';
+}
+
+function loadEmojiCategory(category) {
+  const grid = document.getElementById('emojiGrid');
+  const emojis = emojiData[category] || [];
+  
+  grid.innerHTML = emojis.map(emoji => 
+    `<button class="emoji-item" onclick="insertEmoji('${emoji}')">${emoji}</button>`
+  ).join('');
+  
+  // 更新分类按钮状态
+  document.querySelectorAll('.emoji-category-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.category === category) {
+      btn.classList.add('active');
+    }
+  });
+}
+
+function insertEmoji(emoji) {
+  const messageInput = document.getElementById('messageInput');
+  const cursorPos = messageInput.selectionStart;
+  const textBefore = messageInput.value.substring(0, cursorPos);
+  const textAfter = messageInput.value.substring(messageInput.selectionEnd);
+  
+  messageInput.value = textBefore + emoji + textAfter;
+  messageInput.selectionStart = messageInput.selectionEnd = cursorPos + emoji.length;
+  messageInput.focus();
+  
+  closeEmojiModal();
+}
+
+// 为消息添加时间戳
+function addMessageTimestamp() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  return `<span class="message-timestamp">${timeString}</span>`;
+}
+
+// 历史记录功能已移除（出于隐私和安全考虑）
+// 所有消息仅在当前会话中有效
+
 // ... 添加昵称按钮事件监听
 document.querySelector('.nickname-btn').addEventListener('click', showNicknameModal);
+
+// 添加表情符号按钮事件监听
+document.querySelector('.emoji-btn').addEventListener('click', showEmojiModal);
+
+// 主题切换功能
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.classList.contains('dark-theme');
+  
+  if (isDark) {
+    body.classList.remove('dark-theme');
+    localStorage.setItem('theme', 'light');
+  } else {
+    body.classList.add('dark-theme');
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+// 初始化主题
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    document.body.classList.add('dark-theme');
+  }
+}
+
+// 添加主题切换按钮事件监听
+document.querySelector('.theme-btn').addEventListener('click', toggleTheme);
+
+// 设置功能
+let appSettings = {
+  soundNotification: true,
+  desktopNotification: false,
+  autoScroll: true
+};
+
+// 声音通知
+function playNotificationSound() {
+  if (!appSettings.soundNotification) return;
+  
+  // 创建音频上下文和音频
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+  oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+  
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
+  
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.2);
+}
+
+// 桌面通知
+function showDesktopNotification(title, body) {
+  if (!appSettings.desktopNotification) return;
+  
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibG9nb0dyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2N2VlYSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM3NjRiYTIiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQ1IiBmaWxsPSJ1cmwoI2xvZ29HcmFkaWVudCkiIG9wYWNpdHk9IjAuMiIvPgogIDxwYXRoIGQ9Ik0yNSAzNSBMNzUgMzUgUTgwIDM1IDgwIDQwIEw4MCA2MCBRODAgNjUgNzUgNjUgTDM1IDY1IEwyNSA3NSBMMjUgNDAgUTI1IDM1IDMwIDM1IFoiIGZpbGw9InVybCgjbG9nb0dyYWRpZW50KSIvPgogIDxjaXJjbGUgY3g9IjQwIiBjeT0iNTAiIHI9IjMiIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iMyIgZmlsbD0id2hpdGUiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjUwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4='
+    });
+  }
+}
+
+// 请求桌面通知权限
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// 显示设置模态框
+function showSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  
+  // 加载当前设置
+  document.getElementById('soundNotification').checked = appSettings.soundNotification;
+  document.getElementById('desktopNotification').checked = appSettings.desktopNotification;
+  document.getElementById('autoScroll').checked = appSettings.autoScroll;
+  
+  modal.style.display = 'block';
+}
+
+// 关闭设置模态框
+function closeSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  modal.style.display = 'none';
+}
+
+// 保存设置
+function saveSettings() {
+  appSettings.soundNotification = document.getElementById('soundNotification').checked;
+  appSettings.desktopNotification = document.getElementById('desktopNotification').checked;
+  appSettings.autoScroll = document.getElementById('autoScroll').checked;
+  
+  // 保存到本地存储
+  localStorage.setItem('appSettings', JSON.stringify(appSettings));
+  
+  // 如果启用桌面通知，请求权限
+  if (appSettings.desktopNotification) {
+    requestNotificationPermission();
+  }
+  
+  closeSettingsModal();
+}
+
+// 初始化设置
+function initSettings() {
+  const savedSettings = localStorage.getItem('appSettings');
+  if (savedSettings) {
+    appSettings = { ...appSettings, ...JSON.parse(savedSettings) };
+  }
+  
+  // 如果启用桌面通知，请求权限
+  if (appSettings.desktopNotification) {
+    requestNotificationPermission();
+  }
+}
+
+// 添加设置按钮事件监听
+document.querySelector('.settings-btn').addEventListener('click', showSettingsModal);
+
+// 网络质量监测
+let networkQuality = 'excellent';
+let pingTimes = [];
+
+function updateNetworkQuality() {
+  const qualityElement = document.getElementById('networkQuality');
+  if (!qualityElement) return;
+  
+  // 计算平均ping时间
+  const avgPing = pingTimes.length > 0 ? pingTimes.reduce((a, b) => a + b) / pingTimes.length : 0;
+  
+  let quality = 'excellent';
+  let qualityText = '网络优秀';
+  
+  if (avgPing > 500) {
+    quality = 'poor';
+    qualityText = '网络较差';
+  } else if (avgPing > 200) {
+    quality = 'good';
+    qualityText = '网络良好';
+  }
+  
+  qualityElement.className = `network-quality ${quality}`;
+  qualityElement.querySelector('span').textContent = qualityText;
+  
+  networkQuality = quality;
+}
+
+function measurePing() {
+  if (!signalingServer || signalingServer.readyState !== WebSocket.OPEN) {
+    return;
+  }
+  
+  const startTime = Date.now();
+  
+  // 发送ping消息
+  signalingServer.send(JSON.stringify({type: '9999'}));
+  
+  // 模拟ping响应（实际应用中需要服务器支持）
+  setTimeout(() => {
+    const pingTime = Date.now() - startTime;
+    pingTimes.push(pingTime);
+    
+    // 只保留最近10次的ping时间
+    if (pingTimes.length > 10) {
+      pingTimes.shift();
+    }
+    
+    updateNetworkQuality();
+  }, 50);
+}
+
+// 定期测量网络质量
+setInterval(measurePing, 5000);
 
 function toggleUsersList() {
   document.body.classList.toggle('show-users');
@@ -757,6 +1177,13 @@ document.addEventListener('DOMContentLoaded', function() {
   if (window.innerWidth <= 768) {
     document.body.classList.remove('show-users');
   }
+  
+  // 添加表情符号分类按钮事件监听
+  document.querySelectorAll('.emoji-category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      loadEmojiCategory(btn.dataset.category);
+    });
+  });
 
   // 添加粘贴事件监听
   document.addEventListener('paste', async (event) => {
