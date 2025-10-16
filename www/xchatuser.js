@@ -62,7 +62,7 @@ class XChatUser {
   async createConnection() {
     const peerConnectionConstraints = {
       optional: [
-        { googIPv6: false }
+        { googIPv6: true }
       ]
     };
     
