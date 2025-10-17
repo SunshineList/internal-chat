@@ -503,7 +503,13 @@ async function sendFile(file) {
       const startTime = Date.now();
       await user.sendFile(fileInfo, file, onProgress);
       const displayName = user.nickname || user.id;
-      addChatItem(me.id, `[文件] ${fileInfo.name} (发送给: ${displayName})`);
+      
+      // 创建文件URL供自己下载
+      const fileUrl = URL.createObjectURL(file);
+      const fileObj = { name: file.name, url: fileUrl };
+      addLinkItem(me.id, fileObj);
+      
+      addChatItem(me.id, `✓ 文件已发送给 ${displayName}`);
     } catch (error) {
       debug.error('❌ 发送文件失败:', error);
       alert('发送文件失败，请重试');
@@ -631,8 +637,17 @@ function refreshUsersHTML() {
   
   // 如果有连接的用户，隐藏欢迎页面，显示聊天界面
   if (hasConnectedUsers) {
-    document.getElementById('welcomeSection').style.display = 'none';
-    document.getElementById('chatWrapper').style.display = 'flex';
+    const welcomeSection = document.getElementById('welcomeSection');
+    const chatWrapper = document.getElementById('chatWrapper');
+    
+    if (welcomeSection) {
+      welcomeSection.style.display = 'none';
+      welcomeSection.style.setProperty('display', 'none', 'important');
+    }
+    if (chatWrapper) {
+      chatWrapper.style.display = 'flex';
+      chatWrapper.style.setProperty('display', 'flex', 'important');
+    }
     
     // 更新连接状态指示器
     const statusIndicator = document.querySelector('.connection-status-indicator span');
@@ -643,14 +658,22 @@ function refreshUsersHTML() {
     }
     
     // 如果聊天区域是空的，添加欢迎消息
-    const chatWrapper = document.getElementById('chatWrapper');
-    if (chatWrapper.children.length === 0) {
+    if (chatWrapper && chatWrapper.children.length === 0) {
       showChatWelcomeMessage();
     }
   } else {
     // 没有连接的用户，显示欢迎页面
-    document.getElementById('welcomeSection').style.display = 'flex';
-    document.getElementById('chatWrapper').style.display = 'none';
+    const welcomeSection = document.getElementById('welcomeSection');
+    const chatWrapper = document.getElementById('chatWrapper');
+    
+    if (welcomeSection) {
+      welcomeSection.style.display = 'flex';
+      welcomeSection.style.setProperty('display', 'flex', 'important');
+    }
+    if (chatWrapper) {
+      chatWrapper.style.display = 'none';
+      chatWrapper.style.setProperty('display', 'none', 'important');
+    }
   }
   
   // 更新在线用户数量
@@ -830,9 +853,14 @@ async function confirmSendFile() {
         await user.sendFile(fileInfo, pendingFile, onProgress);
       }
       
+      // 创建文件URL供自己下载
+      const fileUrl = URL.createObjectURL(pendingFile);
+      const fileObj = { name: pendingFile.name, url: fileUrl };
+      addLinkItem(me.id, fileObj);
+      
       // 使用昵称显示在聊天记录中
       const displayNames = selectedUsers.map(u => u.nickname || u.id).join(', ');
-      addChatItem(me.id, `[文件] ${fileInfo.name} (发送给: ${displayNames})`);
+      addChatItem(me.id, `✓ 文件已发送给 ${displayNames}`);
     } catch (error) {
       debug.error('❌ 发送文件失败:', error);
       alert('发送文件失败，请重试');
