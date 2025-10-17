@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>私密聊天室 - 安全的P2P聊天和文件传输工具</title>
+  <title>P2P聊天室 - 安全的P2P聊天和文件传输工具</title>
   <meta name="description" content="一个安全的私密聊天室应用，基于WebRTC实现点对点连接，支持创建房间、邀请链接、实时聊天和文件传输，无需中转服务器，安全高效。" />
   <meta name="keywords" content="私密聊天, 点对点聊天, 安全聊天室, WebRTC聊天, 文件传输, P2P聊天工具, 无中转聊天" />
-  <script src="./xchatuser.js?v=22"></script>
-  <link rel="stylesheet" href="./style.css?v=22">
+  <script src="./xchatuser.js?v=23"></script>
+  <link rel="stylesheet" href="./style.css?v=23">
 </head>
 <body>
+  <!-- 背景装饰 -->
   <div class="background-decoration">
     <div class="floating-shape"></div>
     <div class="floating-shape"></div>
     <div class="floating-shape"></div>
   </div>
   
+  <!-- 拖拽文件提示 -->
   <div class="dragtip">
     <h1>松开发送文件</h1>
     <div class="drag-preview-area">
@@ -23,15 +25,53 @@
       <div class="drag-text">将文件拖拽到这里<br>支持任意格式文件</div>
     </div>
   </div>
+
+  <!-- 移动端顶部导航栏 -->
+  <header class="app-header mobile-only">
+    <div class="header-left">
+      <div class="app-logo-mini">
+        <svg viewBox="0 0 100 100" width="32" height="32">
+          <defs>
+                <linearGradient id="logoGradientMini" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#10b981"/>
+                  <stop offset="100%" style="stop-color:#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="45" fill="url(#logoGradientMini)" opacity="0.2"/>
+          <path d="M25 35 L75 35 Q80 35 80 40 L80 60 Q80 65 75 65 L35 65 L25 75 L25 40 Q25 35 30 35 Z" fill="url(#logoGradientMini)"/>
+          <circle cx="40" cy="50" r="3" fill="white"/>
+          <circle cx="50" cy="50" r="3" fill="white"/>
+          <circle cx="60" cy="50" r="3" fill="white"/>
+        </svg>
+      </div>
+      <h1 class="app-title">P2P聊天室</h1>
+    </div>
+    <div class="header-right">
+      <button class="header-btn toggle-users-btn" title="在线用户">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/>
+        </svg>
+        <span class="online-count" id="onlineCount">0</span>
+      </button>
+      <button class="header-btn theme-btn" title="切换主题">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主聊天区域 -->
   <div class="left">
+    <!-- 欢迎页面 -->
     <div class="welcome-section" id="welcomeSection">
       <div class="welcome-content">
         <div class="app-logo">
           <svg viewBox="0 0 100 100" width="80" height="80">
             <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#667eea"/>
-                <stop offset="100%" style="stop-color:#764ba2"/>
+                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#10b981"/>
+                  <stop offset="100%" style="stop-color:#06b6d4"/>
               </linearGradient>
             </defs>
             <circle cx="50" cy="50" r="45" fill="url(#logoGradient)" opacity="0.2"/>
@@ -41,7 +81,7 @@
             <circle cx="60" cy="50" r="3" fill="white"/>
           </svg>
         </div>
-        <h1 class="welcome-title">私密聊天室</h1>
+        <h1 class="welcome-title">P2P聊天室</h1>
         <p class="welcome-subtitle">局域网文字/文件P2P传输工具</p>
         <div class="feature-cards">
           <div class="feature-card">
@@ -68,8 +108,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 聊天消息区域 -->
     <div class="chat-wrapper" id="chatWrapper" style="display: none;">
     </div>
+
+    <!-- 工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
         <button class="toolbar-btn nickname-btn" title="设置昵称">
@@ -89,12 +133,12 @@
         </button>
       </div>
       <div class="toolbar-right">
-        <button class="toolbar-btn theme-btn" title="切换主题">
+        <button class="toolbar-btn theme-btn desktop-only" title="切换主题">
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z"/>
           </svg>
         </button>
-        <button class="toolbar-btn settings-btn" title="设置">
+        <button class="toolbar-btn settings-btn desktop-only" title="设置">
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
           </svg>
@@ -111,9 +155,21 @@
         </button>
       </div>
     </div>
+
+    <!-- 消息输入框 -->
     <textarea id="messageInput" class="txt-msg" onkeydown="enterTxt(event)" placeholder="输入消息...按 Enter 发送，Shift+Enter 或 Ctrl+Enter 换行"></textarea>
   </div>
+
+  <!-- 用户列表侧边栏 -->
   <div class="right">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">在线用户</h2>
+      <button class="sidebar-close mobile-only" onclick="toggleUsersList()">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+        </svg>
+      </button>
+    </div>
     <div class="network-status">
       <div class="network-quality excellent" id="networkQuality">
         <div class="quality-bars">
@@ -125,10 +181,13 @@
         <span>网络优秀</span>
       </div>
     </div>
-    <ul id="users">
-    </ul>
+    <div class="users-container">
+      <ul id="users">
+      </ul>
+    </div>
   </div>
 
+  <!-- 移动端遮罩层 -->
   <div class="mobile-overlay"></div>
 
   <div class="modal" id="userSelectModal">

@@ -1,3 +1,13 @@
+// 开发模式开关 - 设置为false可关闭所有调试日志
+const DEV_MODE = false;
+
+// 调试日志函数
+const debug = {
+  log: (...args) => DEV_MODE && console.log(...args),
+  warn: (...args) => DEV_MODE && console.warn(...args),
+  error: (...args) => console.error(...args), // 错误始终显示
+};
+
 const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const wsUrl = `${wsProtocol}://${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}/ws`;
 
@@ -85,7 +95,7 @@ function connectWebSocket() {
   signalingServer = new WebSocket(wsUrlWithPassword);
   
   signalingServer.onopen = () => {
-    console.log('Connected to signaling server');
+    debug.log('✓ 已连接到信令服务器');
     
     // 读取保存的昵称
     const match = document.cookie.match(/nickname=([^;]+)/);
@@ -154,7 +164,7 @@ function connectWebSocket() {
   }
 
   signalingServer.onerror = (error) => {
-    console.error('WebSocket error:', error);
+    debug.error('❌ WebSocket错误:', error);
     if (error.target.readyState === WebSocket.CLOSED) {
       alert('密码错误或连接失败');
       // 显示密码输入框，隐藏主界面
@@ -495,7 +505,7 @@ async function sendFile(file) {
       const displayName = user.nickname || user.id;
       addChatItem(me.id, `[文件] ${fileInfo.name} (发送给: ${displayName})`);
     } catch (error) {
-      console.error('发送文件失败:', error);
+      debug.error('❌ 发送文件失败:', error);
       alert('发送文件失败，请重试');
     } finally {
       currentTransferUser = null;
@@ -528,11 +538,9 @@ function connectAllOther() {
   const targets = users.filter(u => u.id !== me.id);
   for (const target of targets) {
     target.onicecandidate = (candidate) => {
-      // console.log('candidate', candidate);
       signalingServer.send(JSON.stringify({uid: me.id, targetId: target.id, type: '9001', data: { candidate }}));
     }
     target.createConnection().then(() => {
-      // console.log('targetAddr', target.connAddressMe);
       signalingServer.send(JSON.stringify({uid: me.id, targetId: target.id, type: '9002', data: { targetAddr: target.connAddressMe }}));
     })
   }
@@ -554,7 +562,7 @@ function refreshUsers(data) {
       xchatUser.nickname = u.nickname; // 设置昵称
       
       xchatUser.onConnectionStateChange = (state) => {
-        console.log(`User ${xchatUser.id} connection state: ${state}`);
+        debug.log(`🔗 用户 ${xchatUser.id} 连接状态: ${state}`);
         refreshUsersHTML();
       };
       
@@ -587,14 +595,14 @@ function joinedRoom() {
 function addCandidate(data) {
   const user = users.find(u => u.id === data.targetId);
   if (user && user.rtcConn) {
-    console.log(`Adding ICE candidate for user ${data.targetId}:`, data.candidate);
+    debug.log(`📡 添加ICE候选: ${data.targetId}`);
     try {
       user.addIceCandidate(data.candidate);
     } catch (error) {
-      console.error('Error adding ICE candidate:', error);
+      debug.error('❌ ICE候选添加失败:', error);
     }
   } else {
-    console.warn(`User ${data.targetId} not found or no RTC connection`);
+    debug.warn(`⚠️ 用户 ${data.targetId} 未找到或无RTC连接`);
   }
 }
 async function joinConnection(data) {
@@ -603,7 +611,6 @@ async function joinConnection(data) {
     return;
   }
   user.onicecandidate = (candidate) => {
-    // console.log('candidate', candidate);
     signalingServer.send(JSON.stringify({uid: me.id, targetId: user.id, type: '9001', data: { candidate }}));
   }
   await user.connectTarget(data.offer.sdp)
@@ -646,9 +653,17 @@ function refreshUsersHTML() {
     document.getElementById('chatWrapper').style.display = 'none';
   }
   
+  // 更新在线用户数量
+  const onlineCount = users.filter(u => !u.isMe && u.isConnected()).length;
+  const onlineCountElem = document.getElementById('onlineCount');
+  if (onlineCountElem) {
+    onlineCountElem.textContent = onlineCount;
+    onlineCountElem.style.display = onlineCount > 0 ? 'block' : 'none';
+  }
+  
   document.querySelector('#users').innerHTML = users.map(u => {
     const isConnected = u.isMe || u.isConnected();
-    console.log(isConnected, '----');
+    debug.log('连接状态:', isConnected);
     const statusClass = isConnected ? 'connected' : 'disconnected';
     const statusIcon = isConnected ? 
       `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>` : 
@@ -819,7 +834,7 @@ async function confirmSendFile() {
       const displayNames = selectedUsers.map(u => u.nickname || u.id).join(', ');
       addChatItem(me.id, `[文件] ${fileInfo.name} (发送给: ${displayNames})`);
     } catch (error) {
-      console.error('发送文件失败:', error);
+      debug.error('❌ 发送文件失败:', error);
       alert('发送文件失败，请重试');
     } finally {
       sendButton.disabled = false;
@@ -1013,8 +1028,7 @@ function initTheme() {
   }
 }
 
-// 添加主题切换按钮事件监听
-document.querySelector('.theme-btn').addEventListener('click', toggleTheme);
+// 主题切换按钮事件监听在 DOMContentLoaded 中处理
 
 // 设置功能
 let appSettings = {
@@ -1177,11 +1191,21 @@ function toggleUsersList() {
 
 // Add event listener for toggle button and overlay
 document.addEventListener('DOMContentLoaded', function() {
-  const toggleBtn = document.querySelector('.toggle-users-btn');
+  const toggleBtns = document.querySelectorAll('.toggle-users-btn');
   const overlay = document.querySelector('.mobile-overlay');
+  const themeBtns = document.querySelectorAll('.theme-btn');
   
-  toggleBtn.addEventListener('click', toggleUsersList);
+  // 为所有切换按钮添加事件监听
+  toggleBtns.forEach(btn => {
+    btn.addEventListener('click', toggleUsersList);
+  });
+  
   overlay.addEventListener('click', toggleUsersList);
+  
+  // 为所有主题切换按钮添加事件监听
+  themeBtns.forEach(btn => {
+    btn.addEventListener('click', toggleTheme);
+  });
 
   // Hide users list by default on mobile
   if (window.innerWidth <= 768) {
