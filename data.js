@@ -56,7 +56,8 @@ function getKey(ip, roomId) {
     return roomId;
   }
   const isInternalNet = internalNet(ip);
-  const key = isInternalNet ? 'internal' : ip;
+  // 修复跨内网连接问题：所有外网用户也归到'external'组，而不是按IP分组
+  const key = isInternalNet ? 'internal' : 'external';
   console.log(`getKey - IP: ${ip}, 内网: ${isInternalNet}, key: ${key}`);
   return key;
 }

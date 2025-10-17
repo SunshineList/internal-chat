@@ -17,12 +17,21 @@ window.fgdx_configuration = {
   iceServers: [
     {
       urls: [
-        'stun:74.125.250.129:19302'
+        'stun:141.148.180.95:23457',
+        'stun:74.125.250.129:19302',
+        'turn:141.148.180.95:23457',
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302'
       ]
     }
   ],
   iceTransportPolicy: 'all',        // 允许所有类型的候选者
-  iceCandidatePoolSize: 10           // 预生成的候选者数量
+  iceCandidatePoolSize: 10,          // 预生成的候选者数量
+  bundlePolicy: 'max-bundle',        // 使用单一传输通道
+  rtcpMuxPolicy: 'require'           // 要求RTCP复用
 };
 
 class XChatUser {

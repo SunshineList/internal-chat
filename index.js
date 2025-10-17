@@ -81,7 +81,20 @@ try {
 }
 
 wsServer.on('connection', (socket, request) => {
-  const ip = request.headers['x-forwarded-for'] ?? request.headers['x-real-ip'] ?? socket._socket.remoteAddress.split("::ffff:").join("");
+  // 修复IP获取逻辑，确保正确获取真实客户端IP
+  let ip = request.headers['x-forwarded-for'] || request.headers['x-real-ip'] || socket._socket.remoteAddress;
+  
+  // 处理x-forwarded-for可能包含多个IP的情况（取第一个）
+  if (ip && ip.includes(',')) {
+    ip = ip.split(',')[0].trim();
+  }
+  
+  // 移除IPv4映射的IPv6前缀
+  if (ip && ip.includes('::ffff:')) {
+    ip = ip.split('::ffff:')[1];
+  }
+  
+  console.log(`客户端连接 - 原始IP: ${socket._socket.remoteAddress}, 处理后IP: ${ip}`);
   const urlWithPath = request.url.replace(/^\//g, '').split('/')
   let roomId = null;
   let pwd = null;
