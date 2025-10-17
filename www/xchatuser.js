@@ -17,14 +17,20 @@ window.fgdx_configuration = {
   iceServers: [
     {
       urls: [
-        'stun:74.125.250.129:19302',
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302'
       ]
     }
   ],
   iceTransportPolicy: 'all',        // 允许所有类型的候选者
   iceCandidatePoolSize: 10,          // 预生成的候选者数量
   bundlePolicy: 'max-bundle',        // 使用单一传输通道
-  rtcpMuxPolicy: 'require'           // 要求RTCP复用
+  rtcpMuxPolicy: 'require',          // 要求RTCP复用
+  iceConnectionReceivingTimeout: 30000,  // ICE连接接收超时30秒
+  iceGatheringTimeout: 30000         // ICE收集超时30秒
 };
 
 class XChatUser {
@@ -59,7 +65,8 @@ class XChatUser {
   #totalChunks = 0;
   #currentChunkInfo = null;
   #pendingFile = null;
-
+  #reconnectAttempts = 0;
+  #maxReconnectAttempts = 3;
 
   async createConnection() {
     const peerConnectionConstraints = {
@@ -104,25 +111,55 @@ class XChatUser {
       }
     };
 
+    // 添加连接超时机制
+    const connectionTimeout = setTimeout(() => {
+      if (this.rtcConn && this.rtcConn.connectionState !== 'connected') {
+        console.warn(`Connection timeout for user ${this.id} (createConnection), current state: ${this.rtcConn.connectionState}`);
+      }
+    }, 30000); // 30秒超时
+
     this.rtcConn.oniceconnectionstatechange = () => {
-      console.log(`ICE connection state: ${this.rtcConn.iceConnectionState}`);
+      console.log(`User ${this.id} ICE connection state: ${this.rtcConn.iceConnectionState}`);
     };
+    
     if (this.rtcConn.connectionState) {
       this.rtcConn.onconnectionstatechange = () => {
+        console.log(`User ${this.id} connection state (createConnection): ${this.rtcConn.connectionState}`);
         this.onConnectionStateChange(this.rtcConn.connectionState);
+        
+        if (this.rtcConn.connectionState === 'connected') {
+          clearTimeout(connectionTimeout);
+          console.log(`Successfully connected to user ${this.id} (createConnection)`);
+        } else if (this.rtcConn.connectionState === 'failed') {
+          clearTimeout(connectionTimeout);
+          console.log(`Connection failed for user ${this.id} (createConnection)`);
+        }
       };
     } else {
       // firefox没有connectionState，也不支持onConnectionStateChange
       this.rtcConn.oniceconnectionstatechange = this.rtcConn.onsignalingstatechange = () => {
-        this.onConnectionStateChange(this.getConnectionState());
+        const state = this.getConnectionState();
+        console.log(`User ${this.id} connection state (Firefox createConnection): ${state}`);
+        this.onConnectionStateChange(state);
+        
+        if (state === 'connected') {
+          clearTimeout(connectionTimeout);
+        } else if (state === 'failed') {
+          clearTimeout(connectionTimeout);
+        }
       };
     }
 
     this.rtcConn.onicecandidate = event => {
       if (event.candidate) {
-        console.log('ICE Candidate Details:', {
+        const candidateType = event.candidate.type;
+        const isRelay = candidateType === 'relay';
+        const isSrflx = candidateType === 'srflx';
+        const isHost = candidateType === 'host';
+        
+        console.log(`ICE Candidate [${candidateType.toUpperCase()}${isRelay ? ' - TURN' : isSrflx ? ' - STUN' : isHost ? ' - HOST' : ''}]:`, {
           candidate: event.candidate.candidate,
-          type: event.candidate.type,
+          type: candidateType,
           protocol: event.candidate.protocol,
           address: event.candidate.address,
           port: event.candidate.port,
@@ -131,10 +168,24 @@ class XChatUser {
           relatedAddress: event.candidate.relatedAddress,
           relatedPort: event.candidate.relatedPort
         });
+        
+        if (isRelay) {
+          console.log('✅ TURN relay candidate found - good for NAT traversal!');
+        } else if (isSrflx) {
+          console.log('📡 STUN server-reflexive candidate found');
+        } else if (isHost) {
+          console.log('🏠 Host candidate found');
+        }
+        
         this.candidateArr.push(event.candidate);
         this.onicecandidate(event.candidate, this.candidateArr);
       } else {
-        console.log('ICE gathering completed');
+        console.log('🏁 ICE gathering completed for user', this.id);
+        console.log(`Total candidates collected: ${this.candidateArr.length}`);
+        const relayCount = this.candidateArr.filter(c => c.type === 'relay').length;
+        const srflxCount = this.candidateArr.filter(c => c.type === 'srflx').length;
+        const hostCount = this.candidateArr.filter(c => c.type === 'host').length;
+        console.log(`Candidate summary - TURN/Relay: ${relayCount}, STUN/Srflx: ${srflxCount}, Host: ${hostCount}`);
       }
     };
 
@@ -186,19 +237,41 @@ class XChatUser {
     this.connAddressMe = await this.rtcConn.createAnswer();
     this.rtcConn.setLocalDescription(this.connAddressMe);
 
+    // 添加连接超时机制
+    const connectionTimeout = setTimeout(() => {
+      if (this.rtcConn && this.rtcConn.connectionState !== 'connected') {
+        console.warn(`Connection timeout for user ${this.id}, attempting reconnect...`);
+        this.reconnect();
+      }
+    }, 30000); // 30秒超时
+
     if (this.rtcConn.connectionState) {
       this.rtcConn.onconnectionstatechange = () => {
-        console.log(`Connection state changed: ${this.rtcConn.connectionState}`);
+        console.log(`User ${this.id} connection state changed: ${this.rtcConn.connectionState}`);
         this.onConnectionStateChange(this.rtcConn.connectionState);
-        if (this.rtcConn.connectionState === 'failed') {
-          console.log('Connection failed, attempting to reconnect...');
-          this.reconnect();
+        
+        if (this.rtcConn.connectionState === 'connected') {
+          clearTimeout(connectionTimeout);
+          console.log(`Successfully connected to user ${this.id}`);
+        } else if (this.rtcConn.connectionState === 'failed') {
+          clearTimeout(connectionTimeout);
+          console.log(`Connection failed for user ${this.id}, attempting to reconnect...`);
+          setTimeout(() => this.reconnect(), 2000); // 2秒后重试
         }
       };
     } else {
       // firefox没有connectionState，也不支持onConnectionStateChange
       this.rtcConn.oniceconnectionstatechange = this.rtcConn.onsignalingstatechange = () => {
-        this.onConnectionStateChange(this.getConnectionState());
+        const state = this.getConnectionState();
+        console.log(`User ${this.id} connection state (Firefox): ${state}`);
+        this.onConnectionStateChange(state);
+        
+        if (state === 'connected') {
+          clearTimeout(connectionTimeout);
+        } else if (state === 'failed') {
+          clearTimeout(connectionTimeout);
+          setTimeout(() => this.reconnect(), 2000);
+        }
       };
     }
 
@@ -570,13 +643,43 @@ class XChatUser {
 
   // 添加重连方法
   async reconnect() {
-    console.log('Attempting to reconnect...');
+    if (this.#reconnectAttempts >= this.#maxReconnectAttempts) {
+      console.error(`Max reconnection attempts (${this.#maxReconnectAttempts}) reached for user ${this.id}`);
+      this.onConnectionStateChange('failed');
+      return;
+    }
+
+    this.#reconnectAttempts++;
+    console.log(`Attempting to reconnect to user ${this.id} (attempt ${this.#reconnectAttempts}/${this.#maxReconnectAttempts})...`);
+    
     if (this.connAddressTarget) {
       try {
+        // 清理旧连接
+        if (this.rtcConn) {
+          this.rtcConn.close();
+        }
+        
+        // 重置候选者数组
+        this.candidateArr = [];
+        
+        // 尝试重新连接
         await this.connectTarget(this.connAddressTarget.sdp);
+        
+        // 如果成功，重置重连计数
+        this.#reconnectAttempts = 0;
+        console.log(`Successfully reconnected to user ${this.id}`);
       } catch (error) {
-        console.error('Reconnection failed:', error);
+        console.error(`Reconnection attempt ${this.#reconnectAttempts} failed for user ${this.id}:`, error);
+        
+        // 如果还有重试机会，延迟后再试
+        if (this.#reconnectAttempts < this.#maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, this.#reconnectAttempts), 10000); // 指数退避，最大10秒
+          console.log(`Will retry reconnection in ${delay}ms...`);
+          setTimeout(() => this.reconnect(), delay);
+        }
       }
+    } else {
+      console.error(`Cannot reconnect to user ${this.id}: no target address available`);
     }
   }
 

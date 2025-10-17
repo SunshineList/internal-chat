@@ -585,7 +585,17 @@ function joinedRoom() {
 }
 
 function addCandidate(data) {
-  users.find(u => u.id === data.targetId).addIceCandidate(data.candidate);
+  const user = users.find(u => u.id === data.targetId);
+  if (user && user.rtcConn) {
+    console.log(`Adding ICE candidate for user ${data.targetId}:`, data.candidate);
+    try {
+      user.addIceCandidate(data.candidate);
+    } catch (error) {
+      console.error('Error adding ICE candidate:', error);
+    }
+  } else {
+    console.warn(`User ${data.targetId} not found or no RTC connection`);
+  }
 }
 async function joinConnection(data) {
   const user = users.find(u => u.id === data.targetId)
