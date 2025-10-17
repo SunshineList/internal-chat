@@ -17,14 +17,7 @@ window.fgdx_configuration = {
   iceServers: [
     {
       urls: [
-        'stun:141.148.180.95:23457',
         'stun:74.125.250.129:19302',
-        'turn:141.148.180.95:23457',
-        'stun:stun.l.google.com:19302',
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-        'stun:stun3.l.google.com:19302',
-        'stun:stun4.l.google.com:19302'
       ]
     }
   ],
